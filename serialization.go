@@ -7,6 +7,10 @@ import (
 	"reflect"
 )
 
+func isArray(value any) bool {
+	return reflect.TypeOf(value).Kind() == reflect.Array || reflect.TypeOf(value).Kind() == reflect.Slice
+}
+
 func isStruct(value any) bool {
 	return reflect.TypeOf(value).Kind() == reflect.Struct
 }
@@ -31,6 +35,30 @@ func funcToAny(value any) any {
 		return value
 	}
 	return reflect.ValueOf(value).Pointer()
+}
+
+func arrayToArrayAny(value any) []any {
+	answer := make([]any, 0)
+	if value == nil || !isArray(value) {
+		return answer
+	}
+	val := reflect.ValueOf(value)
+	for i := 0; i < val.Len(); i++ {
+		part := val.Index(i).Interface()
+		if isStruct(part) {
+			answer = append(answer, structToArrayAny(part)...)
+			continue
+		}
+		if isFunc(part) || isChannel(part) {
+			answer = append(answer, reflect.ValueOf(part).Pointer())
+			continue
+		}
+		if isArray(part) {
+			answer = append(answer, arrayToArrayAny(part)...)
+			continue
+		}
+	}
+	return answer
 }
 
 func structToArrayAny(value any) []any {
@@ -67,9 +95,19 @@ func anyToCorrectAny(value any) any {
 	return value
 }
 
-type Serialization func(value any) (uint64, error)
+type SerializationCondition[conditionType ConditionType] func(value conditionType) (uint64, error)
 
-func SerializationValueDefault(value any) (uint64, error) {
+type SerializationAlphabet[alphabetType AlphabetType] func(value alphabetType) (uint64, error)
+
+func SerializationConditionDefault[conditionType ConditionType](value conditionType) (uint64, error) {
+	return serializationAny(value)
+}
+
+func SerializationAlphabetDefault[alphabetType AlphabetType](value alphabetType) (uint64, error) {
+	return serializationAny(value)
+}
+
+func serializationAny(value any) (uint64, error) {
 	correctAny := anyToCorrectAny(value)
 
 	var buf bytes.Buffer

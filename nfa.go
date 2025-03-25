@@ -7,7 +7,8 @@ import "slices"
 type NFA[conditionType ConditionType, alphabetType AlphabetType] struct {
 	body map[uint64]map[uint64][]uint64
 
-	funcSerialization Serialization
+	serializationCondition SerializationCondition[conditionType]
+	serializationAlphabet  SerializationAlphabet[alphabetType]
 
 	conditions map[uint64]*conditionType
 	alphabet   map[uint64]*alphabetType
@@ -51,7 +52,7 @@ func (N *NFA[conditionType, alphabetType]) GetAlphabet() []alphabetType {
 }
 
 func (N *NFA[conditionType, alphabetType]) ToNext(alphabetType alphabetType) ([]conditionType, bool) {
-	num, err := N.funcSerialization(alphabetType)
+	num, err := N.serializationAlphabet(alphabetType)
 	if err != nil {
 		return nil, false
 	}
@@ -62,11 +63,8 @@ func (N *NFA[conditionType, alphabetType]) ToNext(alphabetType alphabetType) ([]
 	}
 
 	N.current = conditionNext
-	answer := make([]conditionType, len(conditionNext))
-	for i, condition := range conditionNext {
-		answer[i] = *N.conditions[condition]
-	}
-	return answer, N.IsFinal()
+
+	return N.GetCurrentCondition(), N.IsFinal()
 }
 
 func (N *NFA[conditionType, alphabetType]) IsFinal() bool {
@@ -82,7 +80,7 @@ func (N *NFA[conditionType, alphabetType]) IsFinal() bool {
 }
 
 func (N *NFA[conditionType, alphabetType]) Reset() {
-	N.current = N.current[:0]
+	N.current = []uint64{N.start}
 }
 
 type MakerNFA[conditionType ConditionType, alphabetType AlphabetType] struct {
@@ -92,15 +90,30 @@ type MakerNFA[conditionType ConditionType, alphabetType AlphabetType] struct {
 func DefaultNFA[conditionType ConditionType, alphabetType AlphabetType]() MakerNFA[conditionType, alphabetType] {
 	return MakerNFA[conditionType, alphabetType]{
 		build: NFA[conditionType, alphabetType]{
-			funcSerialization: SerializationValueDefault},
+			serializationCondition: SerializationConditionDefault[conditionType],
+			serializationAlphabet:  SerializationAlphabetDefault[alphabetType],
+			body:                   make(map[uint64]map[uint64][]uint64),
+			alphabet:               make(map[uint64]*alphabetType),
+			conditions:             make(map[uint64]*conditionType),
+			current:                make([]uint64, 0),
+			end:                    make([]uint64, 0),
+		},
 	}
 }
 
 func SerializationNFA[conditionType ConditionType, alphabetType AlphabetType](
-	serialization Serialization) MakerNFA[conditionType, alphabetType] {
+	serializationCondition SerializationCondition[conditionType],
+	serializationAlphabet SerializationAlphabet[alphabetType]) MakerNFA[conditionType, alphabetType] {
 	return MakerNFA[conditionType, alphabetType]{
 		build: NFA[conditionType, alphabetType]{
-			funcSerialization: serialization},
+			serializationCondition: serializationCondition,
+			serializationAlphabet:  serializationAlphabet,
+			body:                   make(map[uint64]map[uint64][]uint64),
+			alphabet:               make(map[uint64]*alphabetType),
+			conditions:             make(map[uint64]*conditionType),
+			current:                make([]uint64, 0),
+			end:                    make([]uint64, 0),
+		},
 	}
 }
 
@@ -108,6 +121,44 @@ func (m MakerNFA[conditionType, alphabetType]) Build() NFA[conditionType, alphab
 	return m.build
 }
 
-func (m MakerNFA[conditionType, alphabetType]) SetAlphabet(alphabet []alphabetType) MakerNFA[conditionType, alphabetType] {
+func (m MakerNFA[conditionType, alphabetType]) AddTransition(start conditionType, transitionAlpha alphabetType, end []conditionType) MakerNFA[conditionType, alphabetType] {
+	startUint, _ := m.build.serializationCondition(start)
+	transition, _ := m.build.serializationAlphabet(transitionAlpha)
+	endUint := make([]uint64, len(end))
 
+	m.build.conditions[startUint] = &start
+
+	m.build.alphabet[transition] = &transitionAlpha
+
+	for i, condition := range end {
+		endUint[i], _ = m.build.serializationCondition(condition)
+		m.build.conditions[endUint[i]] = &condition
+	}
+	if _, ok := m.build.body[startUint]; !ok {
+		m.build.body[startUint] = make(map[uint64][]uint64)
+	}
+
+	m.build.body[startUint][transition] = endUint
+
+	return m
+}
+
+func (m MakerNFA[conditionType, alphabetType]) SetStart(condition conditionType) MakerNFA[conditionType, alphabetType] {
+	conditionUint, _ := m.build.serializationCondition(condition)
+
+	m.build.conditions[conditionUint] = &condition
+	m.build.start = conditionUint
+	m.build.current = []uint64{conditionUint}
+	return m
+}
+
+func (m MakerNFA[conditionType, alphabetType]) SetEnd(conditions []conditionType) MakerNFA[conditionType, alphabetType] {
+	end := make([]uint64, len(conditions))
+	for i, condition := range conditions {
+		conditionUint, _ := m.build.serializationCondition(condition)
+		end[i] = conditionUint
+		m.build.conditions[conditionUint] = &condition
+	}
+	m.build.end = end
+	return m
 }
