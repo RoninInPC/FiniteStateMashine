@@ -59,10 +59,14 @@ func (N *NFA[conditionType, alphabetType]) ToNext(alphabetType alphabetType) ([]
 
 	conditionNext := make([]uint64, 0)
 	for _, condition := range N.current {
-		conditionNext = append(conditionNext, N.body[condition][num]...)
+		conditions, ok := N.body[condition][num]
+		if !ok {
+			continue
+		}
+		conditionNext = append(conditionNext, conditions...)
 	}
 
-	N.current = conditionNext
+	N.current = fixCurrent(conditionNext)
 
 	return N.GetCurrentCondition(), N.IsFinal()
 }
@@ -162,3 +166,17 @@ func (m MakerNFA[conditionType, alphabetType]) SetEnd(conditions []conditionType
 	m.build.end = end
 	return m
 }
+
+func fixCurrent(current []uint64) []uint64 {
+	answer := make([]uint64, 0)
+	for _, part := range current {
+		if !slices.Contains(answer, part) {
+			answer = append(answer, part)
+		}
+	}
+	return answer
+}
+
+/*func NFAtoDFA[conditionType ConditionType, alphabetType AlphabetType](nfa NFA[conditionType, alphabetType]) DFA[conditionType, alphabetType] {
+
+}*/

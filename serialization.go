@@ -77,12 +77,19 @@ func structToArrayAny(value any) []any {
 			answer = append(answer, reflect.ValueOf(field).Pointer())
 			continue
 		}
+		if isArray(field) {
+			answer = append(answer, arrayToArrayAny(field)...)
+			continue
+		}
 		answer = append(answer, field)
 	}
 	return answer
 }
 
 func anyToCorrectAny(value any) any {
+	if isArray(value) {
+		return arrayToArrayAny(value)
+	}
 	if isStruct(value) {
 		return structToArrayAny(value)
 	}
