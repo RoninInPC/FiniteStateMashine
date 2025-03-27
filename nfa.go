@@ -125,7 +125,7 @@ func (m MakerNFA[conditionType, alphabetType]) Build() NFA[conditionType, alphab
 	return m.build
 }
 
-func (m MakerNFA[conditionType, alphabetType]) AddTransition(start conditionType, transitionAlpha alphabetType, end []conditionType) MakerNFA[conditionType, alphabetType] {
+func (m MakerNFA[conditionType, alphabetType]) AddTransitions(start conditionType, transitionAlpha alphabetType, end []conditionType) MakerNFA[conditionType, alphabetType] {
 	startUint, _ := m.build.serializationCondition(start)
 	transition, _ := m.build.serializationAlphabet(transitionAlpha)
 	endUint := make([]uint64, len(end))
@@ -142,7 +142,34 @@ func (m MakerNFA[conditionType, alphabetType]) AddTransition(start conditionType
 		m.build.body[startUint] = make(map[uint64][]uint64)
 	}
 
-	m.build.body[startUint][transition] = endUint
+	if _, ok := m.build.body[startUint][transition]; !ok {
+		m.build.body[startUint][transition] = make([]uint64, 0)
+	} else {
+		m.build.body[startUint][transition] = append(m.build.body[startUint][transition], endUint...)
+	}
+
+	return m
+}
+
+func (m MakerNFA[conditionType, alphabetType]) AddTransition(start conditionType, transitionAlpha alphabetType, end conditionType) MakerNFA[conditionType, alphabetType] {
+	startUint, _ := m.build.serializationCondition(start)
+	transition, _ := m.build.serializationAlphabet(transitionAlpha)
+	endUint, _ := m.build.serializationCondition(end)
+
+	m.build.conditions[startUint] = &start
+	m.build.conditions[endUint] = &end
+
+	m.build.alphabet[transition] = &transitionAlpha
+
+	if _, ok := m.build.body[startUint]; !ok {
+		m.build.body[startUint] = make(map[uint64][]uint64)
+	}
+
+	if _, ok := m.build.body[startUint][transition]; !ok {
+		m.build.body[startUint][transition] = make([]uint64, 0)
+	} else {
+		m.build.body[startUint][transition] = append(m.build.body[startUint][transition], endUint)
+	}
 
 	return m
 }

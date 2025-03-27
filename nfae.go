@@ -48,3 +48,58 @@ func (N *EpsilonNFA[conditionType, alphabetType]) ToNext(alphabetType alphabetTy
 
 	return N.GetCurrentCondition(), N.IsFinal()
 }
+
+func (N *EpsilonNFA[conditionType, alphabetType]) GetEpsilon() alphabetType {
+	return *N.alphabet[N.epsilon]
+}
+
+func DefaultEpsilonNFA[conditionType ConditionType, alphabetType AlphabetType](epsilon alphabetType) MakerEpsilonNFA[conditionType, alphabetType] {
+	return MakerEpsilonNFA[conditionType, alphabetType]{
+		DefaultNFA[conditionType, alphabetType](),
+		epsilon,
+	}
+}
+
+func SerializationEpsilonNFA[conditionType ConditionType, alphabetType AlphabetType](
+	serializationCondition SerializationCondition[conditionType],
+	serializationAlphabet SerializationAlphabet[alphabetType],
+	epsilon alphabetType) MakerEpsilonNFA[conditionType, alphabetType] {
+	return MakerEpsilonNFA[conditionType, alphabetType]{
+		SerializationNFA[conditionType, alphabetType](serializationCondition, serializationAlphabet),
+		epsilon,
+	}
+}
+
+type MakerEpsilonNFA[conditionType ConditionType, alphabetType AlphabetType] struct {
+	MakerNFA[conditionType, alphabetType]
+	epsilon alphabetType
+}
+
+func (m MakerEpsilonNFA[conditionType, alphabetType]) AddTransitions(start conditionType, transitionAlpha alphabetType, end []conditionType) MakerEpsilonNFA[conditionType, alphabetType] {
+	m.MakerNFA.AddTransitions(start, transitionAlpha, end)
+	return m
+}
+
+func (m MakerEpsilonNFA[conditionType, alphabetType]) AddTransition(start conditionType, transitionAlpha alphabetType, end conditionType) MakerEpsilonNFA[conditionType, alphabetType] {
+	m.MakerNFA.AddTransition(start, transitionAlpha, end)
+	return m
+}
+
+func (m MakerEpsilonNFA[conditionType, alphabetType]) SetStart(condition conditionType) MakerEpsilonNFA[conditionType, alphabetType] {
+	m.MakerNFA.SetStart(condition)
+	return m
+}
+
+func (m MakerEpsilonNFA[conditionType, alphabetType]) SetEnd(conditions []conditionType) MakerEpsilonNFA[conditionType, alphabetType] {
+	m.MakerNFA.SetEnd(conditions)
+	return m
+}
+
+func (m MakerEpsilonNFA[conditionType, alphabetType]) Build() EpsilonNFA[conditionType, alphabetType] {
+	epsilonUint, _ := m.build.serializationAlphabet(m.epsilon)
+	m.build.alphabet[epsilonUint] = &m.epsilon
+	return EpsilonNFA[conditionType, alphabetType]{
+		m.build,
+		epsilonUint,
+	}
+}
