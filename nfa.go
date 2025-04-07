@@ -51,19 +51,25 @@ func (N *NFA[conditionType, alphabetType]) GetAlphabet() []alphabetType {
 	return alphabet
 }
 
-func (N *NFA[conditionType, alphabetType]) ToNext(alphabetType alphabetType) ([]conditionType, bool) {
-	num, err := N.serializationAlphabet(alphabetType)
+func (N *NFA[conditionType, alphabetType]) ToNext(alphabet alphabetType) ([]conditionType, bool) {
+	num, err := N.serializationAlphabet(alphabet)
 	if err != nil {
 		return nil, false
 	}
 
 	conditionNext := make([]uint64, 0)
+	c := len(N.current)
 	for _, condition := range N.current {
 		conditions, ok := N.body[condition][num]
 		if !ok {
+			c--
 			continue
 		}
 		conditionNext = append(conditionNext, conditions...)
+	}
+
+	if c == 0 {
+		return nil, false
 	}
 
 	N.current = fixCurrent(conditionNext)

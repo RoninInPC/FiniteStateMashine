@@ -28,21 +28,27 @@ func (N *EpsilonNFA[conditionType, alphabetType]) nextEpsilon() {
 
 }
 
-func (N *EpsilonNFA[conditionType, alphabetType]) ToNext(alphabetType alphabetType) ([]conditionType, bool) {
-	num, err := N.serializationAlphabet(alphabetType)
+func (N *EpsilonNFA[conditionType, alphabetType]) ToNext(alphabet alphabetType) ([]conditionType, bool) {
+	num, err := N.serializationAlphabet(alphabet)
 	if err != nil {
 		return nil, false
 	}
 	N.nextEpsilon()
 
+	c := len(N.current)
 	conditionNext := make([]uint64, 0)
 	for _, condition := range N.current {
 		conditions, ok := N.body[condition][num]
 		if !ok {
+			c--
 			continue
 		}
 		conditionNext = append(conditionNext, conditions...)
 	}
+	if c == 0 {
+		return nil, false
+	}
+	N.nextEpsilon()
 
 	N.current = conditionNext
 

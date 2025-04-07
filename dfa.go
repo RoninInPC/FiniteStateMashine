@@ -45,11 +45,13 @@ func (D *DFA[conditionType, alphabetType]) GetAlphabet() []alphabetType {
 	return alphabet
 }
 
-func (D *DFA[conditionType, alphabetType]) ToNext(alphabetType alphabetType) ([]conditionType, bool) {
-	alphabetTypeUint, _ := D.serializationAlphabet(alphabetType)
+func (D *DFA[conditionType, alphabetType]) ToNext(alphabet alphabetType) ([]conditionType, bool) {
+	alphabetTypeUint, _ := D.serializationAlphabet(alphabet)
 	newCurrent, ok := D.body[D.current][alphabetTypeUint]
 	if ok {
 		D.current = newCurrent
+	} else {
+		return nil, false
 	}
 	return D.GetCurrentCondition(), D.IsFinal()
 }
