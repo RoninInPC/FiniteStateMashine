@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func C[anything any](a anything) {
+	println(a)
+}
+
 func TestDFA1(t *testing.T) {
 	dfa := DefaultDFA[string, string]().
 		AddTransition("0", "a", "1").
